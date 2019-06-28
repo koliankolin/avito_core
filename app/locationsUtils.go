@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"reflect"
+	"strings"
 )
 
 
@@ -19,8 +20,8 @@ type Locations struct {
 }
 
 
-func getAllLocations() []byte {
-	resp, _ := http.Get("https://www.avito.ru/web/1/slocations?limit=1000")
+func getAllLocations(letter string) []byte {
+	resp, _ := http.Get("https://www.avito.ru/web/1/slocations?limit=10000&q=" + letter)
 
 	body, err := ioutil.ReadAll(resp.Body)
 
@@ -35,26 +36,30 @@ func getSubLocations() (*Locations, error) {
 	sublocations := new(Location)
 	sublocations.Локации = make(map[string][]string)
 	finSubLocations := new(Locations)
-	locations := getAllLocations()
 
 	var result map[string]map[string][]interface{}
 
-	err := json.Unmarshal(locations, &result)
-	if err != nil {
-		return nil, nil
-	}
+	for letter := rune('а'); string(letter) != "я"; letter++ {
+		locations := getAllLocations(string(letter))
+		err := json.Unmarshal(locations, &result)
+		if err != nil {
+			return nil, nil
+		}
 
-	for _, val := range result["result"]["locations"] {
-		name := val.(map[string]interface{})["names"].(map[string]interface{})["1"].(string)
-		parent := val.(map[string]interface{})["parent"]
-		if parent != nil {
-			parentName := parent.(map[string]interface{})["names"].(map[string]interface{})["1"].(string)
-			sublocations.Локации[parentName] = append(sublocations.Локации[parentName], name)
+		for _, val := range result["result"]["locations"] {
+			name := val.(map[string]interface{})["names"].(map[string]interface{})["1"].(string)
+			parent := val.(map[string]interface{})["parent"]
+			if parent != nil {
+				parentName := parent.(map[string]interface{})["names"].(map[string]interface{})["1"].(string)
+				parentName = parentName
+				sublocations.Локации[parentName] = append(sublocations.Локации[parentName], name)
+			}
 		}
 	}
+
 	// Add Moscow and Piter
-	sublocations.Локации["Москва"] = []string{"Москва"}
-	sublocations.Локации["Санкт-Петербург"] = []string{"Санкт-Петербург"}
+	sublocations.Локации["Москва"] = append(sublocations.Локации["Москва"], "Москва")
+	sublocations.Локации["Санкт-Петербург"] = append(sublocations.Локации["Санкт-Петербург"], "Санкт-Петербург")
 
 	finSubLocations.Россия = *sublocations
 
@@ -78,6 +83,12 @@ func getSublocationsJson() string {
 }
 
 func getSublocationsOne(location string) string {
+	arr := strings.Split(location, " ")
+	if len(arr) > 2 {
+		arr[0] = strings.Title(arr[0])
+	}
+	location = strings.Join(arr, " ")
+
 	locations, err := getSubLocations()
 
 	if err != nil {
@@ -100,32 +111,39 @@ func getSublocationsOne(location string) string {
 	return `{"message":"No such location"}`
 }
 
-func printHumanReadableOne(location string) {
+func printHumanReadableOne(location string) error {
+	arr := strings.Split(location, " ")
+	arr[0] = strings.Title(arr[0])
+	location = strings.Join(arr, " ")
+
 	locations, err := getSubLocations()
 
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	if cities, ok := locations.Россия.Локации[location]; ok == true {
 		fmt.Println(location)
-		if len(cities) - 2 >= 0 {
-			for _, city := range cities[:len(cities) - 2] {
+		if len(cities) - 1 >= 0 {
+			for _, city := range cities[:len(cities) - 1] {
 				fmt.Printf("\t├── %s\n", city)
 			}
 		}
 
 		fmt.Printf("\t└── %s\n", cities[len(cities) - 1])
+		return nil
 	} else {
-		return
+		return nil
 	}
 }
 
-func printHumanReadableAll() {
+func printHumanReadableAll() error {
 	locations, err := getSubLocations()
 	keys := reflect.ValueOf(locations.Россия.Локации).MapKeys()
 
+	fmt.Println(locations)
+
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	fmt.Println("Россия")
@@ -133,15 +151,15 @@ func printHumanReadableAll() {
 	for _, key := range keys[:len(keys) - 1]{
 		cities := locations.Россия.Локации[key.String()]
 		fmt.Printf("\t├── %s\n", key.String())
-		if len(cities) - 2 >= 0 {
-			for _, city := range cities[:len(cities) - 2] {
+		if len(cities) - 1 >= 0 {
+			for _, city := range cities[:len(cities) - 1] {
 				fmt.Printf("\t\t├── %s\n", city)
 			}
 		}
 
 		fmt.Printf("\t\t└── %s\n", cities[len(cities) - 1])
 	}
-
+	return nil
 }
 
 
