@@ -16,34 +16,6 @@ type Statistics struct {
 	Categories map[string]int
 }
 
-//func getOneLocationStatistic(location string) ([]byte, error) {
-//	locations, err := getSubLocations()
-//
-//	if err != nil {
-//		return []byte{}, err
-//	}
-//
-//	for loc, cities := range locations.Россия.Локации {
-//		if strings.ToLower(location) == strings.ToLower(loc) {
-//			stats, err := getStatisticsFromLocation(loc)
-//			if err != nil {
-//				return []byte{}, err
-//			}
-//			return stats, nil
-//		}
-//		for _, city := range cities {
-//			if strings.ToLower(location) == strings.ToLower(city) {
-//				stats, err := getStatisticsFromLocation(city)
-//				if err != nil {
-//					return []byte{}, err
-//				}
-//				return stats, nil
-//			}
-//		}
-//	}
-//	return []byte{}, nil
-//}
-
 func convertToInt(str string) (int, error) {
 	return strconv.Atoi(strings.ReplaceAll(str, " ", ""))
 }
@@ -94,9 +66,13 @@ func getStatisticsFromLocation(location string) (*Statistics, error) {
 func getStatisticsOneJson(location string) ([]byte, error) {
 	stats, err := getStatisticsFromLocation(location)
 
+	if stats == nil {
+		return []byte{}, fmt.Errorf("no such location: " + location)
+	}
+
 	statisticsJson, err := json.Marshal(stats)
 	if err != nil {
-		return []byte{}, nil
+		return []byte{}, err
 	}
 
 	return statisticsJson, nil
@@ -110,7 +86,7 @@ func printHumanReadableStatistic(location string) error {
 	}
 
 	if stats == nil {
-		return fmt.Errorf("no such location " + location)
+		return fmt.Errorf("no such location: " + location)
 	}
 
 	fmt.Printf("Локация: %s\n", strings.Title(stats.Location))

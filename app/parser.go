@@ -36,7 +36,7 @@ func main() {
 					Flags: []cli.Flag{
 						cli.BoolFlag{
 							Name:        "print, p",
-							Usage: "print in human readable format",
+							Usage: " - print in human readable format",
 							Destination: &human,
 						},
 						cli.StringFlag{
@@ -53,7 +53,7 @@ func main() {
 							Flags: []cli.Flag{
 								cli.BoolFlag{
 									Name:        "print, p",
-									Usage: "print in human readable format",
+									Usage: " - print in human readable format",
 									Destination: &human,
 								},
 							},
@@ -94,13 +94,9 @@ func main() {
 					Aliases: []string{"c"},
 					Usage: "get tree of categories",
 					Flags: []cli.Flag{
-					//	cli.StringFlag{
-					//		Name:        "name, n",
-					//		Destination: &name,
-					//	},
 						cli.BoolFlag{
 							Name:        "print, p",
-							Usage: "print in human readable format",
+							Usage: " - print in human readable format",
 							Destination: &human,
 						},
 					},
@@ -123,6 +119,7 @@ func main() {
 				{
 					Name:    "statistics",
 					Aliases: []string{"s"},
+					Usage: "get statistics for locations",
 					Flags: []cli.Flag{
 						cli.StringFlag{
 							Name: "name, n",
@@ -130,7 +127,40 @@ func main() {
 						},
 						cli.BoolFlag{
 							Name: "print, p",
+							Usage: " - print in human readable format",
 							Destination: &human,
+						},
+					},
+					Subcommands: []cli.Command{
+						{
+							Name: "all",
+							Aliases: []string{"a"},
+							Usage: "get total statistics",
+							Flags: []cli.Flag{
+								cli.BoolFlag{
+									Name:        "print, p",
+									Usage: " - print in human readable format",
+									Destination: &human,
+								},
+							},
+							Action: func(c *cli.Context) {
+								if human == true {
+									err := printHumanReadableStatistic("Россия")
+									check(err)
+								} else {
+									stats, err := getStatisticsOneJson("Россия")
+									if err != nil {
+										check(err)
+										return
+									}
+									fileName := "/go/data/statisticsTotal.json"
+									err = ioutil.WriteFile(fileName, stats, 0644)
+									check(err)
+									if err == nil {
+										fmt.Println("Your JSON-file in " + fileName)
+									}
+								}
+							},
 						},
 					},
 					Action: func(c *cli.Context) {
@@ -139,14 +169,17 @@ func main() {
 							check(err)
 						} else {
 							stats, err := getStatisticsOneJson(name)
+							if err != nil {
+								check(err)
+								return
+							}
 							fileName := "/go/data/statistics" + strings.Title(translit.EncodeToBGN(name)) + ".json"
 							err = ioutil.WriteFile(fileName, stats, 0644)
 							check(err)
 							if err == nil {
-								fmt.Println("Your JSON-file in ./data/statistics" + strings.Title(translit.EncodeToBGN(name)))
+								fmt.Println("Your JSON-file in ./data/statistics" + strings.Title(translit.EncodeToBGN(name)) + ".json")
 							}
 						}
-
 					},
 				},
 			},
